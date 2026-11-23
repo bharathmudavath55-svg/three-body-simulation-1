@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trisolar — Three-Body Gravitational Simulator</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌌</text></svg>">
+</head>
+<body>
+  <canvas id="simCanvas"></canvas>
+
+  <!-- Top bar -->
+  <div id="topBar">
+    <div class="top-left">
+      <span class="logo">&#9728; Trisolar</span>
+      <span class="tagline">Three-Body Simulator</span>
+    </div>
+    <div class="top-center">
+      <button id="btnRewind" title="Rewind"><span>&#9198;</span></button>
+      <button id="btnPlayPause" title="Play/Pause (Space)"><span>&#9654;</span></button>
+      <button id="btnStep" title="Step Forward"><span>&#9197;</span></button>
+      <button id="btnReset" title="Reset"><span>&#8634;</span></button>
+    </div>
+    <div class="top-right">
+      <span id="timeDisplay">t = 0.000</span>
+      <span id="energyDisplay">E = 0.000</span>
+      <span id="fpsDisplay">60 fps</span>
+    </div>
+  </div>
+
+  <!-- Left sidebar: Controls -->
+  <div id="sidebar" class="sidebar-left">
+    <div class="sidebar-toggle" id="sidebarToggle">&#9664;</div>
+
+    <div class="panel">
+      <h3>Preset</h3>
+      <select id="presetSelect">
+        <optgroup label="2D Classic">
+          <option value="figure8" selected>Figure-8</option>
+          <option value="butterfly">Butterfly I</option>
+          <option value="moth">Moth I</option>
+          <option value="yarn">Yarn</option>
+          <option value="yin_yang_1">Yin-Yang I</option>
+          <option value="lagrange">Lagrange (Equilateral)</option>
+          <option value="euler">Euler (Collinear)</option>
+        </optgroup>
+        <optgroup label="2D Broucke-Hénon">
+          <option value="broucke_a1">Broucke A1</option>
+          <option value="broucke_a2">Broucke A2</option>
+          <option value="broucke_a7">Broucke A7</option>
+        </optgroup>
+        <optgroup label="Classic Problems">
+          <option value="pyth_3body">Pythagorean 3-Body</option>
+        </optgroup>
+        <optgroup label="Sandbox">
+          <option value="solar">Sun-Earth-Moon</option>
+          <option value="binary_star">Binary + Planet</option>
+          <option value="random">Random</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="panel">
+      <h3>Simulation</h3>
+      <label>Bodies: <span id="nBodiesVal">3</span>
+        <input type="range" id="nBodies" min="2" max="10" value="3" step="1">
+      </label>
+      <label>Integrator:
+        <select id="integrator">
+          <option value="rk4" selected>RK4 (Runge-Kutta 4)</option>
+          <option value="verlet">Velocity Verlet</option>
+          <option value="euler">Euler (basic)</option>
+        </select>
+      </label>
+      <label>Time Step: <span id="dtVal">5.0e-4</span>
+        <input type="range" id="dt" min="-5" max="-2" value="-3.3" step="0.1">
+      </label>
+      <label>Speed: <span id="speedVal">5.0</span>
+        <input type="range" id="speed" min="0.1" max="50" value="5.0" step="0.1">
+      </label>
+      <label>G (gravity): <span id="gVal">1.00</span>
+        <input type="range" id="gConst" min="0.01" max="5" value="1" step="0.01">
+      </label>
+      <label>Softening: <span id="softenVal">0.00</span>
+        <input type="range" id="softening" min="0" max="0.5" value="0" step="0.01">
+      </label>
+    </div>
+
+    <div class="panel">
+      <h3>Display</h3>
+      <label>Body Size: <span id="bodySizeVal">0.20</span>
+        <input type="range" id="bodySize" min="0.02" max="1.0" value="0.20" step="0.02">
+      </label>
+      <label>Trail Length: <span id="trailLenVal">1500</span>
+        <input type="range" id="trailLength" min="0" max="5000" value="1500" step="50">
+      </label>
+      <label><input type="checkbox" id="showTrails" checked> Show Trails</label>
+      <label><input type="checkbox" id="showVectors"> Show Velocity Vectors</label>
+      <label><input type="checkbox" id="showForces"> Show Force Vectors</label>
+      <label><input type="checkbox" id="showGrid" checked> Show Grid</label>
+      <label><input type="checkbox" id="showAxes" checked> Show Axes</label>
+      <label>Camera:
+        <select id="cameraMode">
+          <option value="free" selected>Free Orbit</option>
+          <option value="follow_com">Follow Center of Mass</option>
+          <option value="follow_0">Follow Body 1</option>
+          <option value="follow_1">Follow Body 2</option>
+          <option value="follow_2">Follow Body 3</option>
+          <option value="top">Top-Down (XY)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="panel">
+      <h3>Bodies</h3>
+      <div id="bodyEditor"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Share</h3>
+      <button id="btnShare" class="btn-full">&#128203; Copy URL</button>
+      <div id="shareMsg" class="share-msg"></div>
+    </div>
+  </div>
+
+  <!-- Info overlay -->
+  <div id="infoOverlay" class="info-overlay">
+    <div class="info-content">
+      <h2>&#9728; Trisolar — Three-Body Simulator</h2>
+      <p>An interactive 3D gravitational N-body physics simulator with periodic orbits, real-time trajectory visualization, numerical integrators, and parameter sharing.</p>
+      <h4>Controls & Interaction</h4>
+      <ul>
+        <li><b>Space</b> — Play / Pause simulation</li>
+        <li><b>R</b> — Reset current simulation</li>
+        <li><b>Left-click drag</b> — Orbit camera in 3D</li>
+        <li><b>Right-click drag</b> — Pan camera view</li>
+        <li><b>Scroll wheel</b> — Zoom in / out</li>
+        <li><b>Click on sphere</b> — Select body and highlight properties</li>
+        <li><b>H</b> — Toggle this help modal</li>
+      </ul>
+      <button id="btnCloseInfo">Start Simulating</button>
+    </div>
+  </div>
+
+  <!-- Scripts: Three.js from CDN, then modular simulator scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="./js/presets.js"></script>
+  <script src="./js/simulation.js"></script>
+  <script src="./js/renderer.js"></script>
+  <script src="./js/ui.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
